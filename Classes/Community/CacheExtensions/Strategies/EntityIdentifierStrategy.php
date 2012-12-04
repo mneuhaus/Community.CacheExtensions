@@ -89,7 +89,8 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
 			$cache->set($identifier, time());
 
-			$class = get_class($entity);
+			$class = $this->reflectionService->getClassNameByObject($entity);
+			$class = str_replace("\\", "_", $class);
 			$cache->set($class, time());
 		}
 
@@ -97,7 +98,8 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
 			$cache->set($identifier, time());
 
-			$class = get_class($entity);
+			$class = $this->reflectionService->getClassNameByObject($entity);
+			$class = str_replace("\\", "_", $class);
 			$cache->set($class, time());
 		}
 
@@ -105,7 +107,8 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
 			$cache->set($identifier, time());
 
-			$class = get_class($entity);
+			$class = $this->reflectionService->getClassNameByObject($entity);
+			$class = str_replace("\\", "_", $class);
 			$cache->set($class, time());
 		}
 	}
