@@ -105,7 +105,9 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 
 		foreach ($unitOfWork->getScheduledEntityDeletions() as $entity) {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
-			$cache->set($identifier, time());
+			if ($identifier !== NULL) {
+				$cache->set($identifier, time());
+			}
 
 			$class = $this->reflectionService->getClassNameByObject($entity);
 			$class = str_replace("\\", "_", $class);
