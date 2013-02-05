@@ -30,12 +30,14 @@ class CacheIdentityService {
 	 */
 	protected $securityContext;
 
-	public function getIdentifierByObject($object) {
+	public function getIdentifier($source) {
 		$strategyClasses = $this->reflectionService->getAllImplementationClassNamesForInterface('\Community\CacheExtensions\Strategies\CacheIdentifierStrategyInterface');
 		$strategies = array();
 		foreach ($strategyClasses as $strategyClass) {
 			$strategyClass = new $strategyClass();
-			return $strategyClass->getIdentifier($object);
+			if ($strategyClass->canIdentify($source)) {
+				return $strategyClass->getIdentifier($source);
+			}
 		}
 	}
 
@@ -45,6 +47,31 @@ class CacheIdentityService {
 			$roles[$key] = $role->__toString();
 		}
 		return implode('-', $roles);
+	}
+
+	/**
+	* TODO: Document this Method! ( convertValue )
+	*/
+	public function convertValue($value) {
+		switch (TRUE) {
+			case is_array($value):
+				foreach ($value as $k => $v) {
+					$value[$k] = $this->convertValue($v);
+				}
+				return implode('_', $value);
+
+			case is_object($value):
+				return spl_object_hash($value);
+
+			case is_int($value):
+			case is_float($value):
+			case is_string($value):
+			case is_bool($value):
+				return preg_replace('/[\\/\\/:\\.\\\\\\?%=]+/', '_', strval($value));
+
+			default:
+				return '';
+		}
 	}
 }
 

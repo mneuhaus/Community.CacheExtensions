@@ -45,14 +45,25 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 	 * Only convert non-persistent types
 	 *
 	 * @param mixed $source
-	 * @param string $targetType
 	 * @return boolean
 	 */
-	public function canIdentify($object) {
+	public function canIdentify($source) {
+		if (is_object($source)) {
+			$source = $this->reflectionService->getClassNameByObject($source);
+		}
+
+		if (!is_string($source)) {
+			return FALSE;
+		}
+
+		return $this->isEntityClass($source);
+	}
+
+	public function isEntityClass($class) {
 		return (
-			$this->reflectionService->isClassAnnotatedWith($targetType, 'TYPO3\Flow\Annotations\Entity') ||
-			$this->reflectionService->isClassAnnotatedWith($targetType, 'TYPO3\Flow\Annotations\ValueObject') ||
-			$this->reflectionService->isClassAnnotatedWith($targetType, 'Doctrine\ORM\Mapping\Entity')
+			$this->reflectionService->isClassAnnotatedWith($class, 'TYPO3\Flow\Annotations\Entity') ||
+			$this->reflectionService->isClassAnnotatedWith($class, 'TYPO3\Flow\Annotations\ValueObject') ||
+			$this->reflectionService->isClassAnnotatedWith($class, 'Doctrine\ORM\Mapping\Entity')
 		);
 	}
 
@@ -68,11 +79,17 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 		return $entityManager;
 	}
 
-	public function getIdentifier($object) {
-		$identifier = $this->persistenceManager->getIdentifierByObject($object);
+	public function getIdentifier($source) {
 		$cache = $this->cacheManager->getCache('Community_CacheExtensions_EntityModificationTimestamps');
+
+		if (is_object($source)) {
+			$identifier = $this->persistenceManager->getIdentifierByObject($source);
+		} else {
+			$identifier = str_replace('\\', '_', $source);
+		}
 		$timestamp = $cache->get($identifier);
-		return $identifier . '-' . $timestamp;
+
+		return sha1($identifier . '-' . $timestamp);
 	}
 
 	/**
@@ -89,9 +106,12 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
 			$cache->set($identifier, time());
 
+
 			$class = $this->reflectionService->getClassNameByObject($entity);
-			$class = str_replace("\\", "_", $class);
-			$cache->set($class, time());
+			foreach ($this->getAffectedClasses($class) as $class) {
+				$class = str_replace('\\', '_', $class);
+				$cache->set($class, time());
+			}
 		}
 
 		foreach ($unitOfWork->getScheduledEntityUpdates() as $entity) {
@@ -99,8 +119,10 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 			$cache->set($identifier, time());
 
 			$class = $this->reflectionService->getClassNameByObject($entity);
-			$class = str_replace("\\", "_", $class);
-			$cache->set($class, time());
+			foreach ($this->getAffectedClasses($class) as $class) {
+				$class = str_replace('\\', '_', $class);
+				$cache->set($class, time());
+			}
 		}
 
 		foreach ($unitOfWork->getScheduledEntityDeletions() as $entity) {
@@ -110,9 +132,35 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 			}
 
 			$class = $this->reflectionService->getClassNameByObject($entity);
-			$class = str_replace("\\", "_", $class);
-			$cache->set($class, time());
+			foreach ($this->getAffectedClasses($class) as $class) {
+				$class = str_replace('\\', '_', $class);
+				$cache->set($class, time());
+			}
 		}
+	}
+
+	public function getAffectedClasses($baseClass, $level = 0, $classes = array()) {
+		if ($level >= 2) {
+			return $classes;
+		}
+		$schema = $this->reflectionService->getClassSchema($baseClass);
+		if (is_object($schema)) {
+			foreach ($schema->getProperties() as $propertyName => $propertySchema) {
+				$subClass = NULL;
+				if ($this->isEntityClass($propertySchema['type'])) {
+					$subClass = $propertySchema['type'];
+				}
+				if ($this->isEntityClass($propertySchema['elementType'])) {
+					$subClass = $propertySchema['elementType'];
+				}
+
+				if ($subClass !== NULL) {
+					$classes = $this->getAffectedClasses($subClass, $level + 1, $classes);
+					$classes[] = $subClass;
+				}
+			}
+		}
+		return array_unique($classes);
 	}
 }
 
