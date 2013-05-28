@@ -45,9 +45,10 @@ class CacheViewHelper  extends \TYPO3\Fluid\Core\ViewHelper\AbstractViewHelper {
 	 * @param mixed $object
 	 * @param string $cacheIdentifier
 	 * @param boolean $useRequest
+	 * @param boolean $forceRender
 	 * @return string Rendered string
 	 */
-	public function render($identifier = NULL, $classes = NULL, $object = NULL, $cacheIdentifier = 'Community_CacheExtensions_Default', $useRequest = TRUE) {
+	public function render($identifier = NULL, $classes = NULL, $object = NULL, $cacheIdentifier = 'Community_CacheExtensions_Default', $useRequest = TRUE, $forceRender = FALSE) {
 		$cache = $this->cacheManager->getCache($cacheIdentifier);
 
 		if ($identifier === NULL) {
@@ -68,7 +69,7 @@ class CacheViewHelper  extends \TYPO3\Fluid\Core\ViewHelper\AbstractViewHelper {
 			$identifier .= sha1($this->cacheIdentityService->convertValue($_REQUEST));
 		}
 
-		if (!$cache->has($identifier)) {
+		if (!$cache->has($identifier) || $forceRender === FALSE) {
 			$cache->set($identifier, $this->renderChildren());
 		}
 
