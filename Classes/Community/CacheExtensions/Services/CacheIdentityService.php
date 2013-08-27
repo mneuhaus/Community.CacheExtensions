@@ -44,7 +44,7 @@ class CacheIdentityService {
 	public function getIdentifierForUserRoles() {
 		$roles = $this->securityContext->getRoles();
 		foreach ($roles as $key => $role) {
-			$roles[$key] = $role->__toString();
+			$roles[$key] = $this->convertValue($role->__toString());
 		}
 		return implode('-', $roles);
 	}

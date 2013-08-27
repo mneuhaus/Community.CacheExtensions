@@ -42,6 +42,12 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 	protected $reflectionService;
 
 	/**
+	 * @var Community\CacheExtensions\Services\CacheIdentityService
+	 * @Flow\Inject
+	 */
+	protected $cacheIdentityService;
+
+	/**
 	 * Only convert non-persistent types
 	 *
 	 * @param mixed $source
@@ -104,6 +110,7 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 
 		foreach ($unitOfWork->getScheduledEntityInsertions() as $entity) {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
+			$identifier = $this->cacheIdentityService->convertValue($identifier);
 			$cache->set($identifier, time());
 
 
@@ -116,6 +123,7 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 
 		foreach ($unitOfWork->getScheduledEntityUpdates() as $entity) {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
+			$identifier = $this->cacheIdentityService->convertValue($identifier);
 			$cache->set($identifier, time());
 
 			$class = $this->reflectionService->getClassNameByObject($entity);
@@ -128,6 +136,7 @@ class EntityIdentifierStrategy implements CacheIdentifierStrategyInterface {
 		foreach ($unitOfWork->getScheduledEntityDeletions() as $entity) {
 			$identifier = $this->persistenceManager->getIdentifierByObject($entity);
 			if ($identifier !== NULL) {
+				$identifier = $this->cacheIdentityService->convertValue($identifier);
 				$cache->set($identifier, time());
 			}
 
